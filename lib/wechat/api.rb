@@ -1,3 +1,5 @@
+require 'erb'
+
 require 'wechat/client'
 require 'wechat/access_token'
 
@@ -71,7 +73,7 @@ class Wechat::Api
   end
 
   def qrcode_url ticket
-    "#{MP_BASE}showqrcode?ticket=#{ticket}"
+    "#{MP_BASE}showqrcode?ticket=#{ERB::Util.url_encode(ticket)}"
   end
 
   protected
