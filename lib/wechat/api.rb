@@ -20,8 +20,8 @@ class Wechat::Api
     get('user/get', params||{})
   end
 
-  def user openid
-    get("user/info", params:{openid: openid})
+  def user openid, lang = 'en'
+    get("user/info", params:{openid: openid, lang: lang})
   end
 
   def menu
