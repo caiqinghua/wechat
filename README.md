@@ -1,16 +1,16 @@
-Wechat Rails
-======================
+WeChat
+======
 
-[![Build Status](https://travis-ci.org/skinnyworm/omniauth-wechat-oauth2.svg)](https://travis-ci.org/skinnyworm/wechat-rails) [![Code Climate](https://codeclimate.com/github/skinnyworm/wechat-rails.png)](https://codeclimate.com/github/skinnyworm/wechat-rails) [![Code Coverage](https://codeclimate.com/github/skinnyworm/wechat-rails/coverage.png)](https://codeclimate.com/github/skinnyworm/wechat-rails) [![Gem Version](https://badge.fury.io/rb/wechat-rails.png)](http://badge.fury.io/rb/wechat-rails)
+[![Build Status](https://travis-ci.org/Eric-Guo/wechat.svg)](https://travis-ci.org/Eric-Guo/wechat) [![Code Climate](https://codeclimate.com/github/Eric-Guo/wechat.png)](https://codeclimate.com/github/Eric-Guo/wechat) [![Code Coverage](https://codeclimate.com/github/Eric-Guo/wechat/coverage.png)](https://codeclimate.com/github/Eric-Guo/wechat) [![Gem Version](https://badge.fury.io/rb/wechat.svg)](https://badge.fury.io/for/rb/wechat)
 
 
-Wechat-rails 可以帮助开发者方便地在Rails环境中集成微信公众平台提供的所有服务，目前微信公众平台提供了以下几种类型的服务。
+WeChat gem 可以帮助开发者方便地在Rails环境中集成微信[公众平台](https://mp.weixin.qq.com/)和[企业平台](https://qy.weixin.qq.com)提供的服务，目前微信公众平台提供了以下几种类型的服务。
 
-- ##### 微信公众平台基本API, 无需Web环境。
-- ##### 消息处理机制, 需运行在Web环境中。
-- ##### OAuth 2.0认证机制
+- 微信公众平台基本API, 无需Web环境
+- 消息处理机制, 需运行在Web环境中
+- OAuth 2.0认证机制
 
-Wechat-rails gem 包含了一个命令行程序可以调用各种无需web环境的API。同时它也提供了Rails Controller的responder DSL, 可以帮助开发者方便地在Rails应用中集成微信的消息处理机制。如果你的App还需要集成微信OAuth2.0, 你可以考虑[omniauth-wechat-oauth2](https://github.com/skinnyworm/omniauth-wechat-oauth2), 这个gem可以方便地和devise集成提供完整的用户认证.
+wechat gem 包含了一个命令行程序可以调用各种无需web环境的API。同时它也提供了Rails Controller的responder DSL, 可以帮助开发者方便地在Rails应用中集成微信的消息处理机制。如果你的App还需要集成微信OAuth2.0, 你可以考虑[omniauth-wechat-oauth2](https://github.com/skinnyworm/omniauth-wechat-oauth2), 这个gem可以方便地和devise集成提供完整的用户认证.
 
 在使用这个Gem前，你需要获得微信API的appid, secret, token。具体情况可以参见http://mp.weixin.qq.com
 
@@ -19,11 +19,11 @@ Wechat-rails gem 包含了一个命令行程序可以调用各种无需web环境
 Using `gem install` or add to your app's `Gemfile`:
 
 ```
-gem install "wechat-rails"
+gem install "wechat"
 ```
 
 ```
-gem "wechat-rails", git:"https://github.com/skinnyworm/wechat-rails"
+gem "wechat", git:"https://github.com/Eric-Guo/wechat"
 ```
 
 
@@ -39,8 +39,19 @@ secret: "my_secret"
 access_token: "/var/tmp/wechat_access_token"
 ```
 
+Windows或者使用企业号，需要存放在`C:/Users/[user_name]/`下，其中corpid和corpsecret可以从企业号管理界面的设置->权限管理，通过新建任意一个管理组后获取。
+
+```
+corpid: "my_appid"
+corpsecret: "my_secret"
+agentid: "1" # 企业应用的id，整型。可在应用的设置页面查看
+access_token: "C:/Users/[user_name]/wechat_access_token"
+```
+
 #### Rails 全局配置
 Rails环境中, 你可以在config中创建wechat.yml, 为每个rails environment创建不同的配置。
+
+公众号配置：
 
 ```
 default: &default
@@ -55,13 +66,38 @@ production:
   token:   <%= ENV['WECHAT_TOKEN'] %>
   access_token:  <%= ENV['WECHAT_ACCESS_TOKEN'] %>
 
-staging: 
-  <<: *default
-
 development: 
   <<: *default
 
 test: 
+  <<: *default
+```
+
+企业号配置，其中token和encoding_aes_key可以从企业号管理界面的应用中心->某个应用->模式选择，选择回调模式后获得。
+
+```
+default: &default
+  corpid: "corpid"
+  corpsecret: "corpsecret"
+  agentid:  "1"
+  access_token: "C:/Users/[user_name]/wechat_access_token"
+  encrypt_mode: true
+  token:    ""
+  encoding_aes_key:  ""
+
+production:
+  corpid:     <%= ENV['WECHAT_CORPID'] %>
+  corpsecret: <%= ENV['WECHAT_CORPSECRET'] %>
+  agentid:    <%= ENV['WECHAT_AGENTID'] %>
+  access_token:  <%= ENV['WECHAT_ACCESS_TOKEN'] %>
+  encrypt_mode:  <%= ENV['WECHAT_ENCRYPT_MODE'] %>
+  token:      <%= ENV['WECHAT_TOKEN'] %>
+  encoding_aes_key:  <%= ENV['WECHAT_ENCODING_AES_KEY'] %>
+
+development:
+  <<: *default
+
+test:
   <<: *default
 ```
 
@@ -76,6 +112,16 @@ class WechatFirstController < ApplicationController
 end
 ```
     
+#### jssdk 支持
+jssdk 使用前需通过config接口注入权限验证配置, 所需参数可以通过 signature 方法获取:
+```ruby
+WechatsController.wechat.jsapi_ticket.signature(request.original_url)
+```
+
+## 关于接口权限
+
+wechat gems 内部不会检查权限。但因公众号类型不同，和微信服务器端通讯时，可能会被拒绝，详细权限控制可参考[官方文档](http://mp.weixin.qq.com/wiki/7/2d301d4b757dedc333b9a9854b457b47.html)。
+
 ## 使用命令行
 
 ```
@@ -87,16 +133,15 @@ Wechat commands:
   wechat custom_text [OPENID, TEXT_MESSAGE]                # 发送文字客服消息
   wechat custom_video [OPENID, VIDEO_PATH]                 # 发送视频客服消息
   wechat custom_voice [OPENID, VOICE_PATH]                 # 发送语音客服消息
-  wechat template_message [OPENID, TEMPLATE_YAML_FILE]     # 发送模板消息
-  wechat help [COMMAND]                                    # Describe available commands or one specific command
   wechat media [MEDIA_ID, PATH]                            # 媒体下载
   wechat media_create [MEDIA_ID, PATH]                     # 媒体上传
   wechat menu                                              # 当前菜单
   wechat menu_create [MENU_YAML]                           # 创建菜单
   wechat menu_delete                                       # 删除菜单
+  wechat message_send [OPENID, TEXT_MESSAGE]               # 发送文字消息(仅企业号)
+  wechat template_message [OPENID, TEMPLATE_YAML_FILE]     # 模板消息接口
   wechat user [OPEN_ID]                                    # 查找关注者
   wechat users                                             # 关注者列表
-
 ```
 
 ### 使用场景
@@ -142,15 +187,47 @@ menu.yaml
 
 ```
 button:
-  -
-    type: "view"
-    name: "保护的"
-    url: "http://***/protected"
-  -
-    type: "view"
-    name: "公开的"
-    url: "http://***"
-    
+ -
+  name: "我要"
+  sub_button:
+   -
+    type: "click"
+    name: "预订午餐"
+    key:  "BOOK_LUNCH"
+    sub_button:
+     -
+   -
+    type: "click"
+    name: "预订晚餐"
+    key:  "BOOK_DINNER"
+    sub_button:
+     -
+   -
+    type: "click"
+    name: "预订半夜餐"
+    key:  "BOOK_NIGHT_SNACK"
+    sub_button:
+     -
+ -
+  name: "查询"
+  sub_button:
+   -
+    type: "click"
+    name: "进出记录"
+    key:  "BADGE_IN_OUT"
+    sub_button:
+     -
+   -
+    type: "click"
+    name: "年假余额"
+    key:  "ANNUAL_LEAVE"
+    sub_button:
+     -
+ -
+  type: "view"
+  name: "关于"
+  url:  "http://blog.cloud-mes.com/"
+
 ```
 
 然后执行命令行
@@ -249,6 +326,11 @@ class WechatsController < ApplicationController
     end
   end
 
+  # 当收到 EventKey 为 mykey 的事件时
+  on :event, with: "mykey" do |request, key|
+    request.reply.text "收到来自#{request[:FromUserName]} 的EventKey 为 #{key} 的事件"
+  end
+
   # 处理图片信息
   on :image do |request|
     request.reply.image(request[:MediaId]) #直接将图片返回给用户
@@ -268,6 +350,16 @@ class WechatsController < ApplicationController
   # 处理地理位置信息
   on :location do |request|
     request.reply.text("#{request[:Location_X]}, #{request[:Location_Y]}") #回复地理位置
+  end
+
+  # 当用户加关注
+  on :event, with: 'subscribe' do |request, key|
+    request.reply.text "#{request[:FromUserName]} #{key} now"
+  end
+
+  # 当用户取消关注订阅
+  on :event, with: 'unsubscribe' do |request, key|
+    request.reply.text "#{request[:FromUserName]}无法收到这条消息。"
   end
 
   # 当无任何responder处理用户信息时,使用这个responder处理
@@ -299,9 +391,8 @@ end
 
 ## Message DSL
 
-Wechat-rails 的核心是一个Message DSL,帮助开发者构建各种类型的消息，包括主动推送的和被动响应的。
+Wechat 的核心是一个Message DSL,帮助开发者构建各种类型的消息，包括主动推送的和被动响应的。
 ....
 
   
-
 
