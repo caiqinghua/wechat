@@ -60,7 +60,7 @@ module Wechat
         "#{key}=#{params[key]}"
       end
       result = Digest::SHA1.hexdigest pairs.join('&')
-      params.merge(signature: result)
+      params.merge(signature: result, appid: @access_token.appid)
     end
 
     private
